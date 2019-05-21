@@ -1,28 +1,16 @@
 const graphql = require('graphql');
 const _ = require('lodash');
+const nation = require('../models/nations');
+const player = require('../models/players');
 
 const { GraphQLObjectType, 
         GraphQLString, 
         GraphQLSchema,
         GraphQLID,
         GraphQLInt,
-        GraphQLList
+        GraphQLList,
+        GraphQLNonNull
 } = graphql;
-
-const players = [
-    {id: '1', name: 'David De Gea', position:'GK', jersynumber:1, nationId: '1'},
-    {id: '2', name: 'Juan Mata', position:'CM', jersynumber:8, nationId: '1'},
-    {id: '3', name: 'Paul Pogba', position:'CM', jersynumber:6, nationId: '2'},
-    {id: '4', name: 'Antony Martial', position:'LW', jersynumber:11, nationId: '2'},
-    {id: '5', name: 'Marcus Rashford', position:'ST', jersynumber:10, nationId: '3'},
-    {id: '6', name: 'Jesse Lingard', position:'CM', jersynumber:14, nationId: '3'}
-]
-
-const nations = [
-    {id: '1', name: 'Spain'},
-    {id: '2', name: 'France'},
-    {id: '3', name: 'England'}
-]
 
 //graphql schema for team
 const PlayerType = new GraphQLObjectType({
@@ -37,7 +25,8 @@ const PlayerType = new GraphQLObjectType({
             resolve(parent, args){
             //while querying parent will have the whole Player object
             //From the Player object get the nationId and check in nations collction
-                return _.find(nations, { id: parent.nationId })
+                //return _.find(nations, { id: parent.nationId })
+                return nation.findById( parent.nationId );
             }
         }
     })
@@ -54,7 +43,8 @@ const NationType = new GraphQLObjectType({
             resolve(parent, args){
                 //parent property will have nation object
                 //from the nation object get the id and check for the similar nationId in players collection
-                return _.filter(players, { nationId: parent.id });
+                //return _.filter(players, { nationId: parent.id });
+                return player.find({ nationId: parent.id });
             } 
         }
     })
@@ -68,7 +58,8 @@ const RootQuery = new GraphQLObjectType({
             args: { id: { type: GraphQLID } },
             resolve(parent, args){
                 //to get the data from database
-                return _.find(players, { id: args.id });
+                //return _.find(players, { id: args.id });
+                return player.findById( args.id );
             }
         },
         nation: {
@@ -76,7 +67,8 @@ const RootQuery = new GraphQLObjectType({
             args: { id: { type: GraphQLID } },
             resolve(parent, args){
                 //to get the data from database
-                return _.find(nations, { id: args.id })
+                //return _.find(nations, { id: args.id })
+                return nation.findById( args.id );
             }
         },
         //to get all the players
@@ -84,7 +76,8 @@ const RootQuery = new GraphQLObjectType({
             type: new GraphQLList(PlayerType),
             resolve(parent, args){
                 //return all the players
-                return players
+                //return players
+                return player.find();
             }
         },
         //to get all nations details
@@ -92,12 +85,54 @@ const RootQuery = new GraphQLObjectType({
             type: new GraphQLList(NationType),
             resolve(parent, args){
                 //return all the nations
-                return nations
+                //return nations
+                return nation.find();
             }
         }
     }
 });
 
+//create mutations to add entries from front end
+const Mutation = new GraphQLObjectType({
+    name: 'Mutation',
+    fields: {
+        addNation:{
+            type: NationType,
+            args: {
+                name: {type: new GraphQLNonNull(GraphQLString)}
+            },
+            resolve(parent, args){
+                let newNation = new nation({
+                    name: args.name
+                });
+
+                //Return the new entry to graphiql
+                return newNation.save()
+            }
+        },
+        addPlayer:{
+            type: PlayerType,
+            args:{
+                name: { type: new GraphQLNonNull(GraphQLString) },
+                position: { type: new GraphQLNonNull(GraphQLString) },
+                jersynumber: { type: new GraphQLNonNull(GraphQLInt) },
+                nationId: { type: new GraphQLNonNull(GraphQLID) }
+            },
+            resolve(parent, args){
+                let newPlayer = new player({
+                    name: args.name,
+                    position: args.position,
+                    jersynumber: args.jersynumber,
+                    nationId: args.nationId
+                });
+
+                return newPlayer.save()
+            }
+        }
+    }
+})
+
 module.exports = new GraphQLSchema({
-    query: RootQuery
+    query: RootQuery,
+    mutation: Mutation
 });
