@@ -7,6 +7,10 @@ const schema = require('./schema/schema');
 const mongoose = require('mongoose');
 const key = require('./key/keys');
 
+const cors = require('cors');
+//allow cross origin requests
+app.use(cors());
+
 //connect to mongodb
 mongoose.connect(`mongodb+srv://Prachit:${key.mongo.pass}@cluster0-fp8zw.mongodb.net/test?retryWrites=true`, { useNewUrlParser: true })
 mongoose.connection.once('open', () => {
